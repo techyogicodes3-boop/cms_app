@@ -1,0 +1,140 @@
+"use client";
+
+export const AUTH_TOKEN_COOKIE = "auth_token";
+export const AUTH_ROLE_COOKIE = "auth_role";
+
+const TOKEN_STORAGE_KEY = "token";
+const USER_STORAGE_KEY = "user";
+const VALID_ROLES = new Set(["admin", "user"]);
+
+function canUseBrowser() {
+  return typeof window !== "undefined" && typeof document !== "undefined";
+}
+
+function getCookie(name) {
+  if (!canUseBrowser()) return null;
+
+  const value = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`))
+    ?.split("=")[1];
+
+  return value ? decodeURIComponent(value) : null;
+}
+
+function deleteCookie(name) {
+  if (!canUseBrowser()) return;
+
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+export function clearAuthSession() {
+  if (canUseBrowser()) {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
+
+  deleteCookie(AUTH_TOKEN_COOKIE);
+  deleteCookie(AUTH_ROLE_COOKIE);
+}
+
+export async function logoutAuthSession() {
+  try {
+    await fetch(`/api/v1/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch {
+    // Local auth is still cleared below; middleware will clear stale cookies on the next navigation.
+  } finally {
+    clearAuthSession();
+  }
+}
+
+export function getRoleRedirectPath(role) {
+  if (role === "admin") return "/admin/dashboard";
+  if (role === "user") return "/home";
+  return "/login";
+}
+
+export function persistAuthSession({ token, user }) {
+  const role = user?.role;
+
+  if (!VALID_ROLES.has(role)) {
+    clearAuthSession();
+    return false;
+  }
+
+  if (canUseBrowser()) {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  }
+
+  return true;
+}
+
+export async function refreshAuthSession() {
+  if (!canUseBrowser()) {
+    return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: false };
+  }
+
+  try {
+    const response = await fetch(`/api/v1/auth/me`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      clearAuthSession();
+      return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: false };
+    }
+
+    const json = await response.json();
+    const user = json?.data?.user;
+    if (!persistAuthSession({ user })) {
+      return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: false };
+    }
+
+    return {
+      isAuthenticated: true,
+      token: null,
+      user,
+      role: user.role,
+      shouldClear: false,
+    };
+  } catch {
+    return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: false };
+  }
+}
+
+export function getClientAuthState() {
+  if (!canUseBrowser()) {
+    return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: false };
+  }
+
+  const cookieRole = getCookie(AUTH_ROLE_COOKIE);
+  const legacyToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+
+  let user = null;
+  try {
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    user = stored ? JSON.parse(stored) : null;
+  } catch {
+    return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: true };
+  }
+
+  const role = user?.role || cookieRole;
+  const isAuthenticated = Boolean(
+    role &&
+      (!cookieRole || role === cookieRole) &&
+      VALID_ROLES.has(role)
+  );
+
+  return {
+    isAuthenticated,
+    token: null,
+    user: isAuthenticated ? user : null,
+    role: isAuthenticated ? role : null,
+    shouldClear: Boolean(legacyToken || cookieRole || user) && !isAuthenticated,
+  };
+}
