@@ -1,0 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-espresso: #4A2318;
+  --color-brand-cocoa: #2B140E;
+  --color-brand-gold: #C89A4B;
+  --color-brand-ivory: #FFF9F3;
+  --color-brand-white: #FFFFFF;
+
+  --color-text-primary: #2E1A14;
+  --color-text-secondary: #7A625A;
+  --color-text-muted: #9B837B;
+  --color-border-light: #E8D8CC;
+  --color-surface-soft: #F6ECDD;
+  --color-surface-hover: #F0E1D2;
+  --color-disabled-bg: #EAE4DD;
+  --color-disabled-text: #9B918B;
+
+  --color-success: #6D9B72;
+  --color-success-bg: #EDF7EE;
+  --color-warning: #9B6E24;
+  --color-warning-bg: #FFF4DB;
+  --color-error: #D95C5C;
+  --color-error-bg: #FFF0F0;
+  --color-info: #316B91;
+  --color-info-bg: #EAF4FA;
+
+  --color-white: #FFFFFF;
+  --color-black: #2B211F;
+
+  --color-slate-50: #FFF8ED;
+  --color-slate-100: #F8EFE2;
+  --color-slate-200: #E8D8C3;
+  --color-slate-300: #E8D8C3;
+  --color-slate-400: #948681;
+  --color-slate-500: #6F625E;
+  --color-slate-600: #6B3E35;
+  --color-slate-700: #3A211E;
+  --color-slate-800: #2B211F;
+  --color-slate-900: #2B211F;
+  --color-slate-950: #3A211E;
+
+  --color-gray-50: #FFF8ED;
+  --color-gray-100: #F8EFE2;
+  --color-gray-200: #E8D8C3;
+  --color-gray-300: #E8D8C3;
+  --color-gray-400: #948681;
+  --color-gray-500: #6F625E;
+  --color-gray-600: #6B3E35;
+  --color-gray-700: #3A211E;
+  --color-gray-800: #2B211F;
+  --color-gray-900: #2B211F;
+  --color-gray-950: #3A211E;
+
+  --color-blue-50: #EAF4FA;
+  --color-blue-100: #EAF4FA;
+  --color-blue-200: #E8D8C3;
+  --color-blue-300: #C9963A;
+  --color-blue-400: #C9963A;
+  --color-blue-500: #6B3E35;
+  --color-blue-600: #6B3E35;
+  --color-blue-700: #52302A;
+  --color-blue-800: #3A211E;
+  --color-blue-900: #3A211E;
+
+  --color-emerald-50: #E9F7EF;
+  --color-emerald-100: #E9F7EF;
+  --color-emerald-200: #E8D8C3;
+  --color-emerald-300: #C9963A;
+  --color-emerald-400: #287A52;
+  --color-emerald-500: #287A52;
+  --color-emerald-600: #287A52;
+  --color-emerald-700: #287A52;
+  --color-emerald-900: #2B211F;
+
+  --color-amber-50: #FFF4DB;
+  --color-amber-100: #FFF4DB;
+  --color-amber-200: #E8D8C3;
+  --color-amber-300: #C9963A;
+  --color-amber-400: #C9963A;
+  --color-amber-500: #C9963A;
+  --color-amber-600: #A56613;
+  --color-amber-700: #A56613;
+
+  --color-yellow-300: #C9963A;
+  --color-yellow-400: #C9963A;
+  --color-orange-50: #FFF4DB;
+  --color-orange-500: #C9963A;
+  --color-orange-700: #A56613;
+  --color-rose-50: #FDECEC;
+  --color-rose-200: #E8D8C3;
+  --color-rose-500: #B33A3A;
+  --color-rose-600: #B33A3A;
+  --color-rose-700: #B33A3A;
+  --color-red-50: #FDECEC;
+  --color-red-200: #E8D8C3;
+  --color-red-300: #B33A3A;
+  --color-red-500: #B33A3A;
+  --color-red-600: #B33A3A;
+  --color-red-700: #B33A3A;
+  --color-green-50: #E9F7EF;
+  --color-green-300: #287A52;
+  --color-green-500: #287A52;
+  --color-green-600: #287A52;
+  --color-purple-50: #F8EFE2;
+  --color-purple-200: #E8D8C3;
+  --color-purple-400: #C9963A;
+  --color-purple-500: #C9963A;
+  --color-purple-600: #6B3E35;
+  --color-purple-700: #3A211E;
+  --color-pink-50: #F8EFE2;
+  --color-pink-600: #6B3E35;
+  --color-indigo-50: #F8EFE2;
+  --color-indigo-600: #6B3E35;
+  --color-teal-500: #316B91;
+
+  --shadow-card-sm: 0 10px 30px rgba(43, 20, 14, 0.08);
+  --shadow-card: 0 10px 30px rgba(43, 20, 14, 0.08);
+  --shadow-popover: 0 16px 40px rgba(43, 20, 14, 0.15);
+
+  --radius-card: 8px;
+  --radius-panel: 8px;
+}
+
+:root {
+  --color-chocolate: #2b140e;
+  --color-espresso: #4a2318;
+  --color-ivory: #fff9f3;
+  --color-cream: #f6ecdd;
+  --color-blush: #e9b8b0;
+  --color-rose: #d85c6b;
+  --color-rose-gold: #c98a78;
+  --color-gold: #c89a4b;
+  --color-card: #fffcf8;
+  --color-border: #e8d8cc;
+  --color-text: #2e1a14;
+  --color-text-muted: #7a625a;
+  --color-success: #6d9b72;
+  --color-danger: #d95c5c;
+  --shadow-card: 0 10px 30px rgba(43, 20, 14, 0.08);
+  --shadow-dropdown: 0 16px 40px rgba(43, 20, 14, 0.15);
+}
+
+@layer base {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  * {
+    border-color: #E8D8C3;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: var(--color-ivory);
+    color: var(--color-text);
+    text-rendering: optimizeLegibility;
+  }
+  
+  code, pre, kbd, samp {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .ui-container {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .ui-card {
+    @apply rounded-lg border border-border-light bg-[#FFFCF8] shadow-[0_10px_30px_rgba(43,20,14,0.08)];
+  }
+
+  .ui-card-interactive {
+    @apply cursor-pointer rounded-lg border border-border-light bg-[#FFFCF8] shadow-[0_10px_30px_rgba(43,20,14,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#C98A78] hover:shadow-[0_16px_40px_rgba(43,20,14,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C6B] focus-visible:ring-offset-2;
+  }
+
+  .ui-btn-primary {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#D85C6B] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(43,20,14,0.08)] transition-all duration-200 hover:bg-[#4A2318] active:bg-[#2B140E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C6B] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-disabled-bg disabled:text-disabled-text;
+  }
+
+  .ui-btn-secondary {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#C98A78] bg-transparent px-5 py-2.5 text-sm font-semibold text-[#2B140E] transition-all duration-200 hover:bg-[#F6ECDD] active:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C6B] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-border-light disabled:bg-disabled-bg disabled:text-disabled-text;
+  }
+
+  .ui-btn-ghost {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-[10px] px-4 py-2 text-sm font-semibold text-brand-espresso transition-all duration-200 hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2;
+  }
+
+  .ui-input {
+    @apply h-11 w-full rounded-lg border border-border-light bg-[#FFFCF8] px-3 text-sm text-text-primary placeholder:text-text-muted shadow-sm outline-none transition-all duration-200 focus:border-[#C98A78] focus:ring-4 focus:ring-[#E9B8B0]/35 disabled:cursor-not-allowed disabled:bg-disabled-bg disabled:text-disabled-text;
+  }
+
+  .ui-section {
+    @apply py-10 sm:py-12 lg:py-16;
+  }
+
+  .ui-badge-premium {
+    @apply inline-flex items-center rounded-full bg-[#F6ECDD] px-3 py-1 text-xs font-semibold text-[#4A2318] ring-1 ring-[#C89A4B]/40;
+  }
+}
+
+.brand-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.choco-hero {
+  background:
+    linear-gradient(90deg, rgba(43, 20, 14, 0.98) 0%, rgba(43, 20, 14, 0.86) 43%, rgba(74, 35, 24, 0.58) 100%),
+    radial-gradient(circle at 75% 30%, rgba(201, 138, 120, 0.28), transparent 30%),
+    linear-gradient(135deg, #2b140e 0%, #4a2318 55%, #2b140e 100%);
+}
+
+.choco-panel {
+  background: rgba(255, 252, 248, 0.92);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  border-radius: 8px;
+}
+
+/* Utility: hide scrollbars while keeping scroll behavior */
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Confetti falling animation */
+@keyframes fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
