@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Upload, X } from "lucide-react";
-import { uploadImageFile } from "@/utils/uploadImage";
+import { X } from "lucide-react";
+import AdminImageManager from "@/components/admin/commonComponents/AdminImageManager";
+import { cleanupUploadedImages, uploadImageEntries } from "@/utils/imageEntries";
 import api from "@/utils/axios";
 
 const ADD_ITEM_API_BASE = "/api/v1/admin/catalogues";
@@ -37,15 +38,12 @@ export default function AddItemModal({
     catalogueId: catalogueId || "",
     name: "",
     price: "",
-    imageUrl: "",
-    imagePublicId: "",
+    images: [],
     stock: "0",
     description: "",
     status: "Active",
   });
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -55,22 +53,13 @@ export default function AddItemModal({
       catalogueId: catalogueId || "",
       name: "",
       price: "",
-      imageUrl: "",
-      imagePublicId: "",
+      images: [],
       stock: "0",
       description: "",
       status: "Active",
     });
     setError(null);
-    setImageFile(null);
-    setImagePreviewUrl("");
   }, [open, catalogueId]);
-
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(imagePreviewUrl);
-    };
-  }, [imagePreviewUrl]);
 
   if (!open) return null;
 
@@ -87,30 +76,14 @@ export default function AddItemModal({
       catalogueId: catalogueId || "",
       name: "",
       price: "",
-      imageUrl: "",
-      imagePublicId: "",
+      images: [],
       stock: "0",
       description: "",
       status: "Active",
     });
     setError(null);
-    setImageFile(null);
-    setImagePreviewUrl("");
     onClose?.();
   };
-
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    setImageFile(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
-    setForm((prev) => ({ ...prev, imageUrl: "", imagePublicId: "" }));
-    setError(null);
-  };
-
-  const previewImageUrl = imagePreviewUrl || form.imageUrl;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -141,27 +114,34 @@ export default function AddItemModal({
 
     setLoading(true);
     setError(null);
+    let uploadedPublicIds = [];
+    let committed = false;
     try {
-      const uploaded = imageFile ? await uploadImageFile(imageFile, "items") : null;
-      const imageUrl = uploaded?.imageUrl || form.imageUrl.trim();
-      const imagePublicId = uploaded?.publicId || uploaded?.imagePublicId || form.imagePublicId;
+      const uploaded = await uploadImageEntries(form.images, "items");
+      uploadedPublicIds = uploaded.uploadedPublicIds;
+      const imageUrls = uploaded.images.map((image) => image.url);
+      const imagePublicIds = uploaded.images.map((image) => image.publicId || "");
       const body = {
         name: form.name.trim(),
         price,
         stock,
         validatedDescription: form.description.trim(),
         isActive: form.status === "Active",
-        ...(imageUrl ? { imageUrls: [imageUrl] } : {}),
-        ...(imagePublicId ? { imagePublicIds: [imagePublicId] } : { imagePublicIds: [] }),
+        imageUrls,
+        imagePublicIds,
       };
       const res = await api.post(`${ADD_ITEM_API_BASE}/${encodeURIComponent(targetCatalogueId)}/items`, body);
       const json = res.data || {};
       if (!json.success) {
         throw new Error(json?.message || json?.error || "Failed to add item.");
       }
+      committed = true;
       onItemAdded?.(formatDisplayItem({ ...json.data, catalogueId: targetCatalogueId }, selectedCatalogueName));
       handleClose();
     } catch (err) {
+      if (!committed && (!err?.request || err?.response)) {
+        await cleanupUploadedImages(uploadedPublicIds);
+      }
       setError(err?.message || "Failed to add item.");
     } finally {
       setLoading(false);
@@ -223,23 +203,12 @@ export default function AddItemModal({
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Image</label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input type="url" value={form.imageUrl} onChange={(e) => { setImageFile(null); setImagePreviewUrl(""); setForm((prev) => ({ ...prev, imageUrl: e.target.value, imagePublicId: "" })); }} placeholder="https://example.com/item.jpg" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                <Upload className="h-4 w-4" />
-                Choose
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageFileChange} disabled={loading} />
-              </label>
-              {previewImageUrl && (
-                <button type="button" onClick={() => { setImageFile(null); setImagePreviewUrl(""); setForm((prev) => ({ ...prev, imageUrl: "", imagePublicId: "" })); }} className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-slate-600 hover:bg-slate-50" aria-label="Remove item image">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {previewImageUrl && <img src={previewImageUrl} alt="Item preview" className="mt-3 h-28 w-28 rounded-lg border border-slate-200 object-cover" />}
-          </div>
+          <AdminImageManager
+            label="Item images"
+            images={form.images}
+            onChange={(images) => setForm((previous) => ({ ...previous, images }))}
+            disabled={loading}
+          />
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>

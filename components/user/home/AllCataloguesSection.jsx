@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
+import ImageSlider from '../catalogues/ImageSlider';
 
 export default function AllCataloguesSection({
   title,
@@ -59,17 +60,8 @@ export default function AllCataloguesSection({
                   className="group cursor-pointer overflow-hidden rounded-lg border border-[#C9963A] bg-[#FFF8ED] shadow-md shadow-[#3A211E]/10 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[#3A211E]/15"
                 >
                   <div className="relative h-40 overflow-hidden bg-[#FFF9F3]">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="h-full w-full object-contain p-2"
-                        onError={(event) => {
-                          event.currentTarget.style.display = 'none';
-                          const fallback = event.currentTarget.parentElement?.querySelector('[data-image-fallback]');
-                          fallback?.classList.remove('hidden');
-                        }}
-                      />
+                    {item.images?.length || item.image ? (
+                      <ImageSlider images={item.images?.length ? item.images : [item.image]} alt={item.title} className="h-full w-full" />
                     ) : ['Beauty & Personal Care', 'Fashion & Apparel', 'Gaming & Entertainment', 'Home & Living', 'Cars'].includes(item.category) ? (
                       <Image
                         src={`/images/categories/${item.category === 'Beauty & Personal Care' ? 'beauty_personal_care' :
@@ -85,7 +77,7 @@ export default function AllCataloguesSection({
                       />
                     ) : null}
 
-                    <div data-image-fallback className={`h-full w-full items-center justify-center bg-[#F6ECDD] text-[#C89A4B] ${item.image ? 'hidden' : 'flex'}`}>
+                    <div data-image-fallback className={`h-full w-full items-center justify-center bg-[#F6ECDD] text-[#C89A4B] ${item.images?.length || item.image || ['Beauty & Personal Care', 'Fashion & Apparel', 'Gaming & Entertainment', 'Home & Living', 'Cars'].includes(item.category) ? 'hidden' : 'flex'}`}>
                       <Gift className="h-10 w-10" aria-hidden="true" />
                     </div>
 

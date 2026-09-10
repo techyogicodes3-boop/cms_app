@@ -11,6 +11,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo } from 'react';
+import ImageSlider from '../../../components/user/catalogues/ImageSlider';
 
 function CataloguesLoading() {
   return (
@@ -47,7 +48,9 @@ function CataloguesContent() {
         itemsLabel: `${cat.itemsCount} items`,    // FIX
         // rating: '4.5',
         slug: cat.uuid,
-        image: cat.image || cat.imageUrl || cat.coverImage || cat.thumbnail || cat.imageUrls?.[0] || null,
+        images: Array.isArray(cat.imageUrls) && cat.imageUrls.length
+          ? cat.imageUrls
+          : [cat.image || cat.imageUrl || cat.coverImage || cat.thumbnail].filter(Boolean),
       }));
   }, [cataloguesData, selectedCategory]);
 
@@ -127,21 +130,8 @@ function CataloguesContent() {
                         <div className="group relative aspect-[4/3] overflow-hidden bg-[#FFF9F3]">
 
                           {/* Category Image */}
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className="h-full w-full object-contain p-2"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.style.display = 'none';
-                                const next = e.target.nextElementSibling;
-                                if (next) {
-                                  next.classList.remove('hidden');
-                                  next.classList.add('flex');
-                                }
-                              }}
-                            />
+                          {item.images.length ? (
+                            <ImageSlider images={item.images} alt={item.title} className="h-full w-full" />
                           ) : ['Beauty & Personal Care', 'Fashion & Apparel', 'Gaming & Entertainment', 'Home & Living', 'Cars'].includes(item.category) ? (
                             <Image
                               src={`/images/categories/${item.category === 'Beauty & Personal Care' ? 'beauty_personal_care' :
@@ -160,10 +150,6 @@ function CataloguesContent() {
                               <Gift className="h-10 w-10" aria-hidden="true" />
                             </div>
                           )}
-                          <div className="hidden h-full w-full items-center justify-center bg-surface-soft text-brand-gold">
-                            <Gift className="h-10 w-10" aria-hidden="true" />
-                          </div>
-
                           {item.category && item.category !== 'General' && (
                             <span className="absolute left-3 top-3 z-20 inline-flex rounded-full bg-brand-espresso px-3 py-1.5 text-xs font-semibold text-white">
                               {item.category}

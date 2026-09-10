@@ -9,7 +9,7 @@ import {
   iconMap,
   iconBgMap,
 } from "./catalogueUtils";
-import { uploadImageFile } from "@/utils/uploadImage";
+import { cleanupUploadedImages, uploadImageEntries } from "@/utils/imageEntries";
 
 const CATALOGUE_TYPES = [
   "Cars",
@@ -93,88 +93,104 @@ export function useCatalogues() {
   };
 
   const updateCatalogue = async (id, formData) => {
-    const uploaded = formData.imageFile
-      ? await uploadImageFile(formData.imageFile, "catalogues")
-      : null;
-    const imageUrl = uploaded?.imageUrl || formData.imageUrl || "";
-    const imagePublicId = uploaded?.publicId || uploaded?.imagePublicId || formData.imagePublicId || "";
-
-    const res = await api.put(getEditCatalogueUrl(id), {
+    const { images, uploadedPublicIds } = await uploadImageEntries(formData.images, "catalogues");
+    let committed = false;
+    try {
+      const imageUrls = images.map((image) => image.url);
+      const imagePublicIds = images.map((image) => image.publicId || "");
+      const res = await api.put(getEditCatalogueUrl(id), {
         name: formData.name,
         description: formData.description || undefined,
-        imageUrl,
-        imagePublicId,
+        imageUrls,
+        imagePublicIds,
         isPublished: formData.published,
-    });
+      });
 
-    const json = res.data || {};
-    if (!json.success) {
-      throw new Error(json?.message || json?.error || "Failed to update catalogue.");
+      const json = res.data || {};
+      if (!json.success) {
+        throw new Error(json?.message || json?.error || "Failed to update catalogue.");
+      }
+      committed = true;
+
+      const data = json.data;
+      setRows((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? {
+              ...c,
+              name: data.name ?? formData.name,
+              type: data.type ?? c.type,
+              subtitle: data.description ?? formData.description,
+              image: data.imageUrls?.[0] ?? imageUrls[0] ?? null,
+              imagePublicId: data.imagePublicIds?.[0] ?? imagePublicIds[0] ?? "",
+              imageUrls: data.imageUrls ?? imageUrls,
+              imagePublicIds: data.imagePublicIds ?? imagePublicIds,
+              active: data.isPublished ?? formData.published,
+            }
+            : c
+        )
+      );
+
+      return { success: true };
+    } catch (error) {
+      if (!committed && (!error?.request || error?.response)) {
+        await cleanupUploadedImages(uploadedPublicIds);
+      }
+      throw error;
     }
-
-    const data = json.data;
-    setRows((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-            ...c,
-            name: data.name ?? formData.name,
-            type: data.type ?? c.type,
-            subtitle: data.description ?? formData.description,
-            image: data.imageUrl ?? imageUrl ?? c.image,
-            imagePublicId: data.imagePublicId ?? imagePublicId ?? "",
-            active: data.isPublished ?? formData.published,
-          }
-          : c
-      )
-    );
-
-    return { success: true };
   };
 
   const createCatalogue = async (formData) => {
-    const uploaded = formData.imageFile
-      ? await uploadImageFile(formData.imageFile, "catalogues")
-      : null;
-    const imageUrl = uploaded?.imageUrl || formData.imageUrl || "";
-    const imagePublicId = uploaded?.publicId || uploaded?.imagePublicId || formData.imagePublicId || "";
-
-    const res = await api.post(CATALOGUES_API_URL, {
+    const { images, uploadedPublicIds } = await uploadImageEntries(formData.images, "catalogues");
+    let committed = false;
+    try {
+      const imageUrls = images.map((image) => image.url);
+      const imagePublicIds = images.map((image) => image.publicId || "");
+      const res = await api.post(CATALOGUES_API_URL, {
         name: formData.name,
         description: formData.description,
-        imageUrl,
-        imagePublicId,
+        imageUrls,
+        imagePublicIds,
         shouldAutoPublish: !!formData.shouldAutoPublish,
-    });
+      });
 
-    const json = res.data || {};
-    if (!json.success) {
-      throw new Error(json?.message || json?.error || "Failed to create catalogue.");
+      const json = res.data || {};
+      if (!json.success) {
+        throw new Error(json?.message || json?.error || "Failed to create catalogue.");
+      }
+      committed = true;
+
+      const data = json.data;
+      const createdDate = new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      const newRow = {
+        id: data.uuid,
+        icon: iconMap[data.type] ?? "📦",
+        iconBg: iconBgMap[data.type] ?? "bg-blue-50",
+        name: data.name,
+        subtitle: data.description || "",
+        image: data.imageUrls?.[0] || imageUrls[0] || null,
+        imagePublicId: data.imagePublicIds?.[0] || imagePublicIds[0] || "",
+        imageUrls: data.imageUrls || imageUrls,
+        imagePublicIds: data.imagePublicIds || imagePublicIds,
+        type: data.type,
+        items: 0,
+        active: data.isPublished ?? formData.shouldAutoPublish,
+        created: createdDate,
+      };
+
+      setRows((prev) => [newRow, ...prev]);
+      return { success: true };
+    } catch (error) {
+      if (!committed && (!error?.request || error?.response)) {
+        await cleanupUploadedImages(uploadedPublicIds);
+      }
+      throw error;
     }
-
-    const data = json.data;
-    const createdDate = new Date().toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-
-    const newRow = {
-      id: data.uuid,
-      icon: iconMap[data.type] ?? "📦",
-      iconBg: iconBgMap[data.type] ?? "bg-blue-50",
-      name: data.name,
-      subtitle: data.description || "",
-      image: data.imageUrl || imageUrl || null,
-      imagePublicId: data.imagePublicId || imagePublicId || "",
-      type: data.type,
-      items: 0,
-      active: data.isPublished ?? formData.shouldAutoPublish,
-      created: createdDate,
-    };
-
-    setRows((prev) => [newRow, ...prev]);
-    return { success: true };
   };
 
   return {

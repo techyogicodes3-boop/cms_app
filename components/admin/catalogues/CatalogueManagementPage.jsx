@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle, Package, PauseCircle } from "lucide-react";
 import { cardShell } from "@/components/admin/dashboard/ui";
 import { useCatalogueActions } from "@/app/admin/layout/CatalogueContext";
+import { createImageEntries } from "@/utils/imageEntries";
 
 // Components
 import ViewToggle from "./ViewToggle";
@@ -44,8 +45,7 @@ export default function CatalogueManagementPage() {
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
-    imageUrl: "",
-    imagePublicId: "",
+    images: [],
     published: true,
   });
   const [editLoading, setEditLoading] = useState(false);
@@ -56,8 +56,7 @@ export default function CatalogueManagementPage() {
   const [createForm, setCreateForm] = useState({
     name: "",
     description: "",
-    imageUrl: "",
-    imagePublicId: "",
+    images: [],
     shouldAutoPublish: false,
   });
   const [createLoading, setCreateLoading] = useState(false);
@@ -98,8 +97,10 @@ export default function CatalogueManagementPage() {
     setEditForm({
       name: cat.name || "",
       description: cat.subtitle || "",
-      imageUrl: cat.image || "",
-      imagePublicId: cat.imagePublicId || "",
+      images: createImageEntries(cat.imageUrls, cat.imagePublicIds, {
+        imageUrl: cat.image,
+        imagePublicId: cat.imagePublicId,
+      }),
       published: !!cat.active,
     });
   };
@@ -134,8 +135,7 @@ export default function CatalogueManagementPage() {
     setCreateForm({
       name: "",
       description: "",
-      imageUrl: "",
-      imagePublicId: "",
+      images: [],
       shouldAutoPublish: false,
     });
     setCreateError(null);

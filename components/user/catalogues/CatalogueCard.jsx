@@ -1,18 +1,17 @@
 import { ArrowRight, Gift } from 'lucide-react';
 import Link from 'next/link';
+import ImageSlider from './ImageSlider';
 export default function CatalogueCard({ catalogue }) {
   const slug = catalogue.uuid || catalogue._id;
-  const image = catalogue.image || catalogue.imageUrl || catalogue.coverImage || catalogue.thumbnail || catalogue.imageUrls?.[0];
+  const images = Array.isArray(catalogue.imageUrls) && catalogue.imageUrls.length
+    ? catalogue.imageUrls
+    : [catalogue.image || catalogue.imageUrl || catalogue.coverImage || catalogue.thumbnail].filter(Boolean);
 
   return (
     <article className="flex flex-col overflow-hidden rounded-lg bg-white shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
       <div className="relative h-40 overflow-hidden bg-[#FFF9F3] sm:h-44">
-        {image ? (
-          <img
-            src={image}
-            alt={catalogue.name || catalogue.catalogueName || 'Catalogue'}
-            className="h-full w-full object-contain p-2"
-          />
+        {images.length ? (
+          <ImageSlider images={images} alt={catalogue.name || catalogue.catalogueName || 'Catalogue'} className="h-full w-full" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#F6ECDD] text-[#C89A4B]">
             <Gift className="h-10 w-10" aria-hidden="true" />

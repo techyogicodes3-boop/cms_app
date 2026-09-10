@@ -5,14 +5,23 @@ export async function getSliderImages() {
   return response.data?.data || [];
 }
 
-export async function uploadSliderImage(file) {
+export async function uploadSliderMedia(file) {
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('file', file);
 
   const response = await api.post('/api/v1/admin/sliders', formData);
 
   return response.data?.data;
 }
+
+export async function replaceSliderMedia(id, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.put(`/api/v1/admin/sliders/${encodeURIComponent(id)}`, formData);
+  return response.data?.data;
+}
+
+export const uploadSliderImage = uploadSliderMedia;
 
 export async function deleteSliderImage(publicId) {
   const response = await api.delete('/api/v1/admin/sliders', {

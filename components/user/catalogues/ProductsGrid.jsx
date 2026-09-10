@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatPrice } from '../../../utils/priceFormatter';
 import { useAddToCart } from '../../../hooks/useCart';
 import toast from 'react-hot-toast';
+import ImageSlider from './ImageSlider';
 
 export default function ProductsGrid({ products, catalogueId, parentName }) {
   const [activeFilters, setActiveFilters] = useState([]);
@@ -60,6 +61,9 @@ export default function ProductsGrid({ products, catalogueId, parentName }) {
       rating: 4.5,
       reviews: 0,
       badge: null,
+      imageUrls: Array.isArray(item.imageUrls) && item.imageUrls.length
+        ? item.imageUrls
+        : [item.imageUrl || item.image].filter(Boolean),
       imageUrl: item.imageUrls?.[0] || item.imageUrl || item.image || null,
     }));
   }, [products]);
@@ -125,23 +129,7 @@ export default function ProductsGrid({ products, catalogueId, parentName }) {
                   className="group flex flex-col overflow-hidden rounded-lg border border-[#E8D8CC] bg-[#FFFCF8] shadow-[0_10px_30px_rgba(43,20,14,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#C98A78]"
                 >
                   <div className="relative h-44 overflow-hidden bg-[#FFF9F3] sm:h-48">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.title}
-                        className="h-full w-full object-contain p-2"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.style.display = 'none';
-                          const next = e.target.nextElementSibling;
-                          if (next) next.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className={`h-full w-full bg-gradient-to-tr from-[#2B140E] via-[#4A2318] to-[#C98A78] ${product.imageUrl ? 'hidden' : ''}`}
-                      aria-hidden="true"
-                    />
+                    <ImageSlider images={product.imageUrls} alt={product.title} className="h-full w-full" />
                     {product.badge && (
                       <span
                         className={`absolute left-3 top-3 rounded ${badgeColor} px-2.5 py-1 text-[0.65rem] font-semibold text-white`}

@@ -6,6 +6,7 @@ import { formatPrice } from '../../../utils/priceFormatter';
 import { useAddToCart } from '../../../hooks/useCart';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import ImageSlider from './ImageSlider';
 
 /**
  * Item Card Component
@@ -14,7 +15,9 @@ import toast from 'react-hot-toast';
 export default function ItemCard({ item, catalogueId }) {
   const addToCart = useAddToCart();
   const [isAdding, setIsAdding] = useState(false);
-  const imageUrl = item.image || item.imageUrl || item.thumbnail || item.imageUrls?.[0];
+  const images = Array.isArray(item.imageUrls) && item.imageUrls.length
+    ? item.imageUrls
+    : [item.image || item.imageUrl || item.thumbnail].filter(Boolean);
 
   const handleAddToCart = async () => {
     if (!item?.uuid) {
@@ -53,19 +56,7 @@ export default function ItemCard({ item, catalogueId }) {
     <article className="group flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 overflow-hidden">
       <div className="relative h-44 overflow-hidden bg-[#FFF9F3] sm:h-48">
         {/* Item Image */}
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={item.name || 'Product'}
-            className="h-full w-full object-contain p-2"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = 'https://via.placeholder.com/400x400/cbd5e1/475569?text=No+Image';
-            }}
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-tr from-slate-200 via-slate-100 to-slate-300" />
-        )}
+        <ImageSlider images={images} alt={item.name || 'Product'} className="h-full w-full" />
 
         {/* Wishlist button */}
         <button

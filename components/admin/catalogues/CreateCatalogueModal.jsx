@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Trash2, Upload } from "lucide-react";
+import AdminImageManager from "@/components/admin/commonComponents/AdminImageManager";
 
 export default function CreateCatalogueModal({
   open,
@@ -12,30 +11,12 @@ export default function CreateCatalogueModal({
   onCreate,
   onFormChange,
 }) {
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
-
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(imagePreviewUrl);
-    };
-  }, [imagePreviewUrl]);
-
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    setImagePreviewUrl(URL.createObjectURL(file));
-    onFormChange({ ...createForm, imageFile: file, imageUrl: "", imagePublicId: "" });
-  };
-
   if (!open) return null;
   const displayError = createError;
-  const previewImageUrl = imagePreviewUrl || createForm.imageUrl;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6 md:p-8">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl md:p-8">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
@@ -94,40 +75,12 @@ export default function CreateCatalogueModal({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">
-              Catalogue Image
-            </label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="url"
-                placeholder="https://example.com/catalogue-image.jpg"
-                value={createForm.imageUrl || ""}
-                onChange={(e) =>
-                  {
-                    setImagePreviewUrl("");
-                    onFormChange({ ...createForm, imageFile: null, imageUrl: e.target.value, imagePublicId: "" });
-                  }
-                }
-                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                <Upload className="h-4 w-4" />
-                Choose
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageFileChange} disabled={createLoading} />
-              </label>
-              {previewImageUrl && (
-                <button type="button" onClick={() => { setImagePreviewUrl(""); onFormChange({ ...createForm, imageFile: null, imageUrl: "", imagePublicId: "" }); }} className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-slate-600 hover:bg-slate-50" aria-label="Remove catalogue image">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {previewImageUrl && (
-              <div className="mt-2 h-28 w-44 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                <img src={previewImageUrl} alt="Catalogue preview" className="h-full w-full object-cover" />
-              </div>
-            )}
-          </div>
+          <AdminImageManager
+            label="Catalogue images"
+            images={createForm.images || []}
+            onChange={(images) => onFormChange({ ...createForm, images })}
+            disabled={createLoading}
+          />
 
           <label className="mt-2 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 border border-slate-200 cursor-pointer">
             <input

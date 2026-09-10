@@ -50,13 +50,7 @@ export default function ItemDetailPage({ params }) {
       }));
     }
 
-    return [
-      {
-        id: 0,
-        url: '/placeholder-product.jpg',
-        alt: item.name,
-      },
-    ];
+    return [];
   }, [item]);
 
   /* ---------------- Featured Catalogues ---------------- */
@@ -71,6 +65,10 @@ export default function ItemDetailPage({ params }) {
       itemsLabel: '0 items',
       rating: '4.8',
       slug: cat.uuid,
+      image: cat.image || cat.imageUrl || cat.coverImage || null,
+      images: Array.isArray(cat.imageUrls) && cat.imageUrls.length
+        ? cat.imageUrls
+        : [cat.image || cat.imageUrl || cat.coverImage].filter(Boolean),
     }));
   }, [cataloguesData]);
 

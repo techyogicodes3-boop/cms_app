@@ -72,6 +72,12 @@ export const iconBgMap = {
 // Helper function to map API item to display format
 export function mapCatalogueItem(item, index) {
   const type = item.type ?? "General";
+  const imageUrls = Array.isArray(item.imageUrls) && item.imageUrls.length
+    ? item.imageUrls
+    : [item.image ?? item.imageUrl ?? item.coverImage ?? item.thumbnail].filter(Boolean);
+  const imagePublicIds = Array.isArray(item.imagePublicIds) && item.imagePublicIds.length
+    ? item.imagePublicIds
+    : [item.imagePublicId ?? item.publicId].filter(Boolean);
   
   return {
     id: item.uuid ?? item._id ?? `catalogue-${index}`,
@@ -80,8 +86,10 @@ export function mapCatalogueItem(item, index) {
     type: type,
     icon: iconMap[type] ?? "📦",
     iconBg: iconBgMap[type] ?? "bg-slate-50",
-    image: item.image ?? item.imageUrl ?? item.coverImage ?? item.thumbnail ?? item.imageUrls?.[0] ?? null,
-    imagePublicId: item.imagePublicId ?? item.publicId ?? null,
+    image: imageUrls[0] ?? null,
+    imagePublicId: imagePublicIds[0] ?? null,
+    imageUrls,
+    imagePublicIds,
     // Support both boolean `isPublished` and string `status` from API
     active: typeof item.isPublished === 'boolean'
       ? item.isPublished

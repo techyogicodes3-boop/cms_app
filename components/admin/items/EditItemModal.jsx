@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Trash2, Upload, X } from "lucide-react";
-import { uploadImageFile } from "@/utils/uploadImage";
+import { X } from "lucide-react";
+import AdminImageManager from "@/components/admin/commonComponents/AdminImageManager";
+import { cleanupUploadedImages, createImageEntries, uploadImageEntries } from "@/utils/imageEntries";
 import api from "@/utils/axios";
 
 export default function EditItemModal({ open, item, catalogues = [], onClose, onSave }) {
@@ -13,13 +14,10 @@ export default function EditItemModal({ open, item, catalogues = [], onClose, on
     stock: "",
     status: "Active",
     description: "",
-    imageUrl: "",
-    imagePublicId: "",
+    images: [],
   });
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
 
   useEffect(() => {
     if (!item) return;
@@ -39,36 +37,17 @@ export default function EditItemModal({ open, item, catalogues = [], onClose, on
       stock: item.stock != null ? String(item.stock) : "",
       status: item.status === "Inactive" ? "Inactive" : "Active",
       description: item.description || item.validatedDescription || "",
-      imageUrl: item.image || item.imageUrl || item.imageUrls?.[0] || "",
-      imagePublicId: item.imagePublicId || item.imagePublicIds?.[0] || "",
+      images: createImageEntries(item.imageUrls, item.imagePublicIds, {
+        imageUrl: item.image || item.imageUrl,
+        imagePublicId: item.imagePublicId,
+      }),
     });
     setError(null);
-    setImageFile(null);
-    setImagePreviewUrl("");
   }, [item]);
-
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(imagePreviewUrl);
-    };
-  }, [imagePreviewUrl]);
 
   if (!open) return null;
 
   const updateForm = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
-
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    setImageFile(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
-    setFormData((prev) => ({ ...prev, imageUrl: "", imagePublicId: "" }));
-    setError(null);
-  };
-
-  const previewImageUrl = imagePreviewUrl || formData.imageUrl;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,19 +61,21 @@ export default function EditItemModal({ open, item, catalogues = [], onClose, on
       setError("Item name is required.");
       return;
     }
-
     setSaving(true);
     setError(null);
+    let uploadedPublicIds = [];
+    let committed = false;
     try {
-      const uploaded = imageFile ? await uploadImageFile(imageFile, "items") : null;
-      const imageUrl = uploaded?.imageUrl || formData.imageUrl.trim();
-      const imagePublicId = uploaded?.publicId || uploaded?.imagePublicId || formData.imagePublicId;
+      const uploaded = await uploadImageEntries(formData.images, "items");
+      uploadedPublicIds = uploaded.uploadedPublicIds;
+      const imageUrls = uploaded.images.map((image) => image.url);
+      const imagePublicIds = uploaded.images.map((image) => image.publicId || "");
       const payload = {
         catalogueId: formData.catalogueId,
         name: formData.name.trim(),
         price: Number(formData.price || 0),
-        imageUrls: imageUrl ? [imageUrl] : [],
-        imagePublicIds: imagePublicId ? [imagePublicId] : [],
+        imageUrls,
+        imagePublicIds,
         validatedDescription: formData.description,
         stock: Number(formData.stock || 0),
         isActive: formData.status === "Active",
@@ -104,9 +85,13 @@ export default function EditItemModal({ open, item, catalogues = [], onClose, on
       if (!result.success) {
         throw new Error(result?.message || result?.error || "Failed to update item.");
       }
+      committed = true;
       onSave?.({ ...result.data, catalogueId: formData.catalogueId });
       onClose?.();
     } catch (err) {
+      if (!committed && (!err?.request || err?.response)) {
+        await cleanupUploadedImages(uploadedPublicIds);
+      }
       setError(err?.message || "Failed to update item.");
     } finally {
       setSaving(false);
@@ -157,23 +142,12 @@ export default function EditItemModal({ open, item, catalogues = [], onClose, on
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Image</label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input type="url" value={formData.imageUrl} onChange={(e) => { setImageFile(null); setImagePreviewUrl(""); setFormData((prev) => ({ ...prev, imageUrl: e.target.value, imagePublicId: "" })); }} className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                <Upload className="h-4 w-4" />
-                Choose
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageFileChange} disabled={saving} />
-              </label>
-              {previewImageUrl && (
-                <button type="button" onClick={() => { setImageFile(null); setImagePreviewUrl(""); setFormData((prev) => ({ ...prev, imageUrl: "", imagePublicId: "" })); }} className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-slate-600 hover:bg-slate-50" aria-label="Remove item image">
-                  <Trash2 className="cursor-pointer h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {previewImageUrl && <img src={previewImageUrl} alt="Item preview" className="mt-3 h-28 w-28 rounded-lg border border-slate-200 object-cover" />}
-          </div>
+          <AdminImageManager
+            label="Item images"
+            images={formData.images}
+            onChange={(images) => updateForm("images", images)}
+            disabled={saving}
+          />
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>

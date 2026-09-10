@@ -147,6 +147,7 @@ export default function UserHomePage() {
       itemsLabel: `${cat.itemsCount} items`,
       slug: cat.uuid,
       image: getCatalogueImage(cat),
+      images: Array.isArray(cat.imageUrls) && cat.imageUrls.length ? cat.imageUrls : [getCatalogueImage(cat)].filter(Boolean),
     }));
   }, [cataloguesData]);
 
@@ -160,6 +161,7 @@ export default function UserHomePage() {
       itemsLabel: `${cat.itemsCount} items`,
       slug: cat.uuid,
       image: getCatalogueImage(cat),
+      images: Array.isArray(cat.imageUrls) && cat.imageUrls.length ? cat.imageUrls : [getCatalogueImage(cat)].filter(Boolean),
     }));
   }, [cataloguesData]);
 

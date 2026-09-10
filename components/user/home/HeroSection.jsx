@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import api from '../../../utils/axios';
 
@@ -12,6 +12,8 @@ const fallbackSlides = [
     originalName: 'Chocotraill',
   },
 ];
+
+const isVideoSlide = (slide) => slide?.mediaType === 'video' || slide?.mimeType?.startsWith('video/');
 
 export default function HeroSection() {
   const [slides, setSlides] = useState(fallbackSlides);
@@ -39,31 +41,54 @@ export default function HeroSection() {
     };
   }, []);
 
-  useEffect(() => {
-    if (slides.length <= 1) return undefined;
-    const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % slides.length);
-    }, 2000);
-
-    return () => window.clearInterval(timer);
-  }, [slides.length]);
-
   const activeSlide = slides[activeIndex] || slides[0];
   const slideLabel = useMemo(() => activeSlide?.originalName || 'Chocotraill gift collection', [activeSlide]);
+  const showNext = useCallback(() => setActiveIndex((current) => (current + 1) % slides.length), [slides.length]);
+  const showPrevious = useCallback(() => setActiveIndex((current) => (current - 1 + slides.length) % slides.length), [slides.length]);
+  const handleMediaError = useCallback(() => {
+    if (slides.length <= 1) {
+      setSlides(fallbackSlides);
+      setActiveIndex(0);
+      return;
+    }
+    showNext();
+  }, [showNext, slides.length]);
+
+  useEffect(() => {
+    if (slides.length <= 1) return undefined;
+    const duration = Number(activeSlide?.duration || 0);
+    const delay = isVideoSlide(activeSlide)
+      ? duration > 0 ? Math.min((duration + 1) * 1000, 120000) : 60000
+      : 2000;
+    const timer = window.setTimeout(showNext, delay);
+    return () => window.clearTimeout(timer);
+  }, [activeSlide, showNext, slides.length]);
 
   return (
     <section className="relative overflow-hidden bg-[#2B140E] text-[#FFF9F3]">
       <div className="absolute inset-0">
-        {slides.map((slide, index) => (
-          <img
-            key={slide.uuid || slide.publicId || slide.imageUrl}
-            src={slide.imageUrl}
-            alt=""
-            className={`absolute inset-0 h-full w-full object-cover transition-all duration-[900ms] ease-out ${
-              index === activeIndex ? 'scale-100 opacity-100' : 'scale-[1.03] opacity-0'
-            }`}
+        {isVideoSlide(activeSlide) ? (
+          <video
+            key={activeSlide.uuid || activeSlide.publicId || activeSlide.imageUrl}
+            src={activeSlide.mediaUrl || activeSlide.imageUrl}
+            autoPlay
+            muted
+            playsInline
+            loop={slides.length === 1}
+            preload="metadata"
+            onEnded={slides.length > 1 ? showNext : undefined}
+            onError={handleMediaError}
+            className="absolute inset-0 h-full w-full object-cover"
           />
-        ))}
+        ) : (
+          <img
+            key={activeSlide?.uuid || activeSlide?.publicId || activeSlide?.imageUrl}
+            src={activeSlide?.mediaUrl || activeSlide?.imageUrl}
+            alt=""
+            onError={handleMediaError}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(43,20,14,0.92)_0%,rgba(43,20,14,0.74)_42%,rgba(43,20,14,0.28)_100%)]" />
       </div>
 
@@ -94,12 +119,19 @@ export default function HeroSection() {
 
         <div className="hidden justify-end lg:flex" aria-label={slideLabel}>
           <div className="w-full max-w-xl overflow-hidden rounded-lg border border-[#C89A4B]/45 bg-[#FFFCF8]/10 shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur">
-            <img src={activeSlide?.imageUrl} alt={slideLabel} className="aspect-[4/3] w-full object-cover" />
+            {isVideoSlide(activeSlide) ? (
+              <video src={activeSlide?.mediaUrl || activeSlide?.imageUrl} aria-label={slideLabel} controls muted playsInline preload="metadata" className="aspect-[4/3] w-full bg-black object-contain" />
+            ) : (
+              <img src={activeSlide?.mediaUrl || activeSlide?.imageUrl} alt={slideLabel} className="aspect-[4/3] w-full object-cover" />
+            )}
           </div>
         </div>
 
         {slides.length > 1 && (
-          <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
+          <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#2B140E]/55 px-2 py-1.5 backdrop-blur-sm">
+            <button type="button" onClick={showPrevious} aria-label="Previous home media" className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-[#C89A4B]">
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
             {slides.map((slide, index) => (
               <button
                 key={slide.uuid || slide.publicId || index}
@@ -109,6 +141,9 @@ export default function HeroSection() {
                 aria-label={`Show slide ${index + 1}`}
               />
             ))}
+            <button type="button" onClick={showNext} aria-label="Next home media" className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-[#C89A4B]">
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
         )}
       </div>

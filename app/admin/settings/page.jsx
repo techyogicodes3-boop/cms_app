@@ -1,7 +1,7 @@
 'use client';
 
-import SliderSettingsPage from '@/components/admin/settings/SliderSettingsPage';
+import HomeMediaSettingsPage from '@/components/admin/settings/HomeMediaSettingsPage';
 
 export default function AdminSettingsPage() {
-  return <SliderSettingsPage />;
+  return <HomeMediaSettingsPage />;
 }

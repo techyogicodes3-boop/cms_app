@@ -1,6 +1,7 @@
 import { ArrowRight, Gift, Tag } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImageSlider from '../catalogues/ImageSlider';
 
 function PrimaryButton({ children, className = '', ...props }) {
   return (
@@ -45,17 +46,8 @@ export default function FeaturedCataloguesSection({ title, subtitle, viewAllLabe
             >
               <div className="relative h-40 overflow-hidden bg-[#FFF9F3] sm:h-44">
                 {/* API image first, then legacy local category art, then plain fallback. */}
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="h-full w-full object-contain p-2"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none';
-                      const fallback = event.currentTarget.parentElement?.querySelector('[data-image-fallback]');
-                      fallback?.classList.remove('hidden');
-                    }}
-                  />
+                {item.images?.length || item.image ? (
+                  <ImageSlider images={item.images?.length ? item.images : [item.image]} alt={item.title} className="h-full w-full" />
                 ) : ['Beauty & Personal Care', 'Fashion & Apparel', 'Gaming & Entertainment', 'Home & Living', 'Cars'].includes(item.category) ? (
                   <Image
                     src={`/images/categories/${item.category === 'Beauty & Personal Care' ? 'beauty_personal_care' :
