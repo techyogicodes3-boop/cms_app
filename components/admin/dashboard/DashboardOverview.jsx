@@ -142,8 +142,8 @@ export default function DashboardOverview() {
     try {
       const isOrders = type === 'orders';
       await downloadAuthenticatedFile(
-        `/api/v1/admin/reports/${isOrders ? 'orders' : 'inquiries'}.xls`,
-        `chocotraill-${isOrders ? 'orders' : 'inquiries'}.xls`
+        `/api/v1/admin/reports/${isOrders ? 'orders' : 'inquiries'}.xlsx`,
+        `chocotraill-${isOrders ? 'orders' : 'inquiries'}.xlsx`
       );
       toast.success(`${isOrders ? 'Orders' : 'Inquiries'} report downloaded`);
     } catch (error) {
