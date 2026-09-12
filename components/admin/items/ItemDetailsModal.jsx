@@ -38,6 +38,7 @@ export default function ItemDetailsModal({ open, item, onClose, onEdit, catalogu
   const [detailsItem, setDetailsItem] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   const itemId = item?.id ?? item?.uuid;
 
@@ -46,6 +47,7 @@ export default function ItemDetailsModal({ open, item, onClose, onEdit, catalogu
     setDetailsLoading(true);
     setDetailsError(null);
     setDetailsItem(null);
+    setSelectedImage(0);
     try {
       const url = `${ITEM_DETAILS_API_BASE}/${encodeURIComponent(catalogueId)}/items/${encodeURIComponent(itemId)}`;
       const res = await api.get(url);
@@ -87,6 +89,7 @@ export default function ItemDetailsModal({ open, item, onClose, onEdit, catalogu
     name: item.name,
     price: item.price,
     image: item.image || '/placeholder-item.jpg',
+    imageUrls: item.imageUrls || [item.image].filter(Boolean),
     stock: item.stock ?? '—',
     status: item.status ?? 'Active',
     description: item.description || item.validatedDescription || '',
@@ -94,6 +97,9 @@ export default function ItemDetailsModal({ open, item, onClose, onEdit, catalogu
   } : null);
 
   if (!open) return null;
+
+  const displayImages = [...new Set((displayItem?.imageUrls?.length ? displayItem.imageUrls : [displayItem?.image]).filter(Boolean))];
+  const activeImage = displayImages[selectedImage % Math.max(displayImages.length, 1)] || '/placeholder-item.jpg';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -135,11 +141,20 @@ export default function ItemDetailsModal({ open, item, onClose, onEdit, catalogu
                 <div>
                   <div className="w-full aspect-square rounded-lg bg-slate-100 overflow-hidden mb-4">
                     <img
-                      src={displayItem.image || '/placeholder-item.jpg'}
+                      src={activeImage}
                       alt={displayItem.name}
                       className="w-full h-full object-contain"
                     />
                   </div>
+                  {displayImages.length > 1 && (
+                    <div className="mb-4 grid grid-cols-5 gap-2" aria-label={`${displayImages.length} product images`}>
+                      {displayImages.map((image, index) => (
+                        <button key={`${image}-${index}`} type="button" onClick={() => setSelectedImage(index)} className={`aspect-square overflow-hidden rounded-lg border-2 bg-slate-50 ${selectedImage === index ? 'border-blue-600' : 'border-slate-200'}`} aria-label={`Show product image ${index + 1}`}>
+                          <img src={image} alt={`${displayItem.name} ${index + 1}`} className="h-full w-full object-contain p-1" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(displayItem.status)}`}>
                       {displayItem.status}

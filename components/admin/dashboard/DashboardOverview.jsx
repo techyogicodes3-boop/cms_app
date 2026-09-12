@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, CheckCircle2, Package, PauseCircle, Users } from "lucide-react";
+import { Box, Download, FileText, MessageSquare, Package, Users } from "lucide-react";
 import api from "@/utils/axios";
 
 const SUMMARY_URL = "/api/v1/admin/dashboard/summary";
@@ -85,6 +85,7 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedMetric, setSelectedMetric] = useState("users");
+  const [commerce, setCommerce] = useState({ orders: [], inquiries: [] });
 
   useEffect(() => {
     let mounted = true;
@@ -106,6 +107,18 @@ export default function DashboardOverview() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    api.get('/api/v1/admin/commerce/activity')
+      .then((response) => {
+        if (mounted && response.data?.success) setCommerce(response.data.data || { orders: [], inquiries: [] });
+      })
+      .catch(() => {
+        // Catalogue/user dashboard remains usable if commerce data cannot load.
+      });
+    return () => { mounted = false; };
   }, []);
 
   const parents = useMemo(() => summary.catalogues || [], [summary.catalogues]);
@@ -182,6 +195,35 @@ export default function DashboardOverview() {
           />
         ))}
       </div>
+
+      <section className="overflow-hidden rounded-lg border border-[#E8D8CC] bg-[#FFFCF8] shadow-[0_10px_30px_rgba(43,20,14,0.08)]">
+        <div className="flex flex-col gap-4 border-b border-[#E8D8CC] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="brand-serif text-2xl font-bold text-[#2E1A14]">Orders & inquiries</h2>
+            <p className="mt-1 text-sm text-[#7A625A]">Latest forms saved before customers continue to WhatsApp.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a href="/api/v1/admin/reports/inquiries.xls" className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#C98A78] px-3 text-sm font-bold text-[#4A2318] hover:bg-[#F6ECDD]"><Download className="h-4 w-4" /> Inquiries Excel</a>
+            <a href="/api/v1/admin/reports/orders.xls" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#D85C6B] px-3 text-sm font-bold text-white hover:bg-[#4A2318]"><Download className="h-4 w-4" /> Orders Excel</a>
+          </div>
+        </div>
+        <div className="grid lg:grid-cols-2">
+          <div className="border-b border-[#E8D8CC] p-5 lg:border-b-0 lg:border-r">
+            <h3 className="flex items-center gap-2 font-bold"><FileText className="h-4 w-4 text-[#D85C6B]" /> Latest orders ({commerce.orders?.length || 0})</h3>
+            <div className="mt-3 space-y-2">
+              {(commerce.orders || []).slice(0, 5).map((order) => <div key={order.uuid} className="flex items-center justify-between gap-3 rounded-lg bg-[#FFF9F3] p-3 text-sm"><div className="min-w-0"><p className="truncate font-semibold">{order.customer?.name || 'Customer'}</p><p className="truncate text-xs text-[#7A625A]">{order.items?.map((item) => item.name).join(', ')}</p></div><div className="shrink-0 text-right"><p className="font-bold">₹{Number(order.total || 0).toLocaleString('en-IN')}</p><p className="text-xs text-[#7A625A]">{new Date(order.createdAt).toLocaleDateString('en-IN')}</p></div></div>)}
+              {!commerce.orders?.length && <p className="py-3 text-sm text-[#7A625A]">No checkout forms submitted yet.</p>}
+            </div>
+          </div>
+          <div className="p-5">
+            <h3 className="flex items-center gap-2 font-bold"><MessageSquare className="h-4 w-4 text-[#D85C6B]" /> Latest inquiries ({commerce.inquiries?.length || 0})</h3>
+            <div className="mt-3 space-y-2">
+              {(commerce.inquiries || []).slice(0, 5).map((inquiry) => <div key={inquiry.uuid} className="flex items-center justify-between gap-3 rounded-lg bg-[#FFF9F3] p-3 text-sm"><div className="min-w-0"><p className="truncate font-semibold">{inquiry.name}</p><p className="truncate text-xs text-[#7A625A]">{inquiry.email} · {inquiry.mobile}</p></div><div className="shrink-0 text-right"><p className="max-w-36 truncate text-xs font-semibold">{inquiry.subject}</p><p className="text-xs text-[#7A625A]">{new Date(inquiry.createdAt).toLocaleDateString('en-IN')}</p></div></div>)}
+              {!commerce.inquiries?.length && <p className="py-3 text-sm text-[#7A625A]">No contact forms submitted yet.</p>}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="">
         <ActivityTable

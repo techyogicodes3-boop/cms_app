@@ -42,8 +42,12 @@ export default function ItemDetailPage({ params }) {
   const productImages = useMemo(() => {
     if (!item) return [];
 
-    if (Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
-      return item.imageUrls.map((url, index) => ({
+    const urls = Array.isArray(item.imageUrls) && item.imageUrls.length > 0
+      ? item.imageUrls
+      : [item.imageUrl || item.image].filter(Boolean);
+
+    if (urls.length > 0) {
+      return [...new Set(urls)].slice(0, 10).map((url, index) => ({
         id: index,
         url,
         alt: `${item.name} image ${index + 1}`,

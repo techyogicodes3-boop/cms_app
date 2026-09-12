@@ -8,7 +8,7 @@ const API_BASE_URL =
   process.env.BACKEND_API_URL ||
   "http://localhost:9000";
 
-const guestOnlyRoutes = new Set(["/login"]);
+const guestOnlyRoutes = new Set(["/login", "/register"]);
 
 function clearAuthCookies(response) {
   response.cookies.delete(AUTH_TOKEN_COOKIE);
@@ -85,6 +85,12 @@ export async function middleware(request) {
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     if (!isAuthenticated) return redirect(request, "/login", true);
     if (role !== "admin") return redirect(request, "/home");
+    return roleCookie === role ? NextResponse.next() : setRoleCookie(NextResponse.next(), role, auth.maxAge);
+  }
+
+  if (pathname === "/account" || pathname.startsWith("/account/")) {
+    if (!isAuthenticated) return redirect(request, "/login", true);
+    if (role !== "user") return redirect(request, "/admin/dashboard");
     return roleCookie === role ? NextResponse.next() : setRoleCookie(NextResponse.next(), role, auth.maxAge);
   }
 

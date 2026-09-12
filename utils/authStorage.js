@@ -53,7 +53,7 @@ export async function logoutAuthSession() {
 
 export function getRoleRedirectPath(role) {
   if (role === "admin") return "/admin/dashboard";
-  if (role === "user") return "/home";
+  if (role === "user") return "/account";
   return "/login";
 }
 
@@ -66,8 +66,27 @@ export function persistAuthSession({ token, user }) {
   }
 
   if (canUseBrowser()) {
+    const guestCartKey = "chocotraillCart:guest";
+    const userCartKey = `chocotraillCart:${user.id || user.uuid || user.email}`;
+    try {
+      const guestCart = JSON.parse(localStorage.getItem(guestCartKey) || "[]");
+      const userCart = JSON.parse(localStorage.getItem(userCartKey) || "[]");
+      if (Array.isArray(guestCart) && guestCart.length) {
+        const merged = [...(Array.isArray(userCart) ? userCart : [])];
+        guestCart.forEach((guestItem) => {
+          const existing = merged.find((item) => item.catalogueItemId === guestItem.catalogueItemId);
+          if (existing) existing.quantity = Number(existing.quantity || 0) + Number(guestItem.quantity || 1);
+          else merged.push(guestItem);
+        });
+        localStorage.setItem(userCartKey, JSON.stringify(merged));
+        localStorage.removeItem(guestCartKey);
+      }
+    } catch {
+      // A malformed legacy cart should not prevent a successful login.
+    }
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    window.dispatchEvent(new Event("cart-changed"));
   }
 
   return true;

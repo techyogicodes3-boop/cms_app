@@ -80,11 +80,11 @@ export default function ItemCard({ item, catalogueId }) {
       </div>
 
       <div className="flex-1 p-5 space-y-2.5">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-900 leading-snug">
+        <h3 title={item.name} className="line-clamp-2 h-12 text-base font-semibold leading-snug text-slate-900 sm:text-lg">
           {item.name}
         </h3>
         {shortDescription && (
-          <p className="mt-1 text-sm sm:text-base text-slate-500 leading-relaxed line-clamp-2">
+          <p title={item.validatedDescription} className="mt-1 line-clamp-2 h-10 text-sm leading-5 text-slate-500 sm:text-base">
             {shortDescription}
           </p>
         )}

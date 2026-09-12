@@ -33,11 +33,6 @@ export default function LoginPage() {
             }
 
             const { data } = json;
-            if (data?.user?.role !== "admin") {
-                setError("This login is only for admin accounts.");
-                return;
-            }
-
             if (!persistAuthSession({ token: data?.token, user: data?.user })) {
                 setError("Login failed because the account role is invalid. Please contact support.");
                 return;
@@ -147,7 +142,7 @@ export default function LoginPage() {
                 </form>
 
                 <p className="mt-5 text-center text-sm text-[#2E1A14]">
-                    New admin?{" "}
+                    New customer?{" "}
                     <Link href="/register" className="font-semibold text-[#D85C6B] transition hover:text-[#4A2318]">
                         Create an account
                     </Link>

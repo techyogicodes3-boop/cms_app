@@ -16,7 +16,8 @@ import FAQSection from '../../../../components/user/checkout/FAQSection';
 import { useCartContext } from '../../../../contexts/CartContext';
 import { useCartItemsData } from '../../../../hooks/useCartItemsData';
 import { useCheckout } from '../../../../contexts/CheckoutContext';
-import { calculateCartAmounts, redirectToWhatsAppCheckout } from '../../../../utils/whatsappCheckout';
+import { buildWhatsAppCheckoutUrl, calculateCartAmounts, parseCartPrice } from '../../../../utils/whatsappCheckout';
+import api from '../../../../utils/axios';
 
 
 export default function CheckoutPage() {
@@ -26,6 +27,7 @@ export default function CheckoutPage() {
   const { cart, isLoading: cartLoading, error: cartError, refetch: refetchCart } = useCartContext();
   const [selectedShippingMethod, setSelectedShippingMethod] = useState('standard');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Refetch cart data on mount to ensure fresh data
   useEffect(() => {
@@ -164,14 +166,46 @@ const handleConfirmPurchase = async () => {
     return;
   }
 
-  redirectToWhatsAppCheckout(orderItems, totals.total, {
+  if (submitting) return;
+  const customer = {
     name: `${address.firstName} ${address.lastName}`.trim(),
     phone: address.phoneNo,
     address: [address.streetAddress, address.city, address.state, address.zipcode]
       .filter(Boolean)
       .join(', '),
     message: address.email ? `Email: ${address.email}` : '',
-  });
+  };
+
+  setSubmitting(true);
+  try {
+    const response = await api.post('/api/v1/orders', {
+      customer: {
+        name: customer.name,
+        email: address.email.trim(),
+        phone: address.phoneNo.trim(),
+        streetAddress: address.streetAddress.trim(),
+        city: address.city.trim(),
+        state: address.state.trim(),
+        zipcode: address.zipcode.trim(),
+      },
+      items: orderItems.map((item) => ({
+        catalogueItemId: item.catalogueItemId || item.id,
+        name: item.title || item.name,
+        quantity: Number(item.quantity || 1),
+        unitPrice: parseCartPrice(item.price),
+        imageUrl: item.image || '',
+      })),
+      shippingMethod: selectedShippingMethod,
+      specialInstruction: address.specialInstruction || '',
+    });
+
+    if (!response.data?.success) throw new Error(response.data?.message || 'Order could not be saved.');
+    const whatsappUrl = buildWhatsAppCheckoutUrl(orderItems, response.data.data.total, customer);
+    window.location.assign(whatsappUrl);
+  } catch (error) {
+    toast.error(error?.response?.data?.message || error.message || 'Could not save your order. Please try again.');
+    setSubmitting(false);
+  }
 };
 
 
@@ -293,6 +327,7 @@ const handleConfirmPurchase = async () => {
                   discount={totals.discount}
                   total={totals.total}
                   onConfirm={handleConfirmPurchase}
+                  isSubmitting={submitting}
                 />
                 <SecurityBadges />
               </div>

@@ -113,7 +113,6 @@ export default function RegisterPage() {
                     name: fullName.trim(),
                     email: email.trim(),
                     password,
-                    role: "admin",
                 }
             );
 

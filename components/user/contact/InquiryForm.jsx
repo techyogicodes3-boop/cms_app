@@ -4,6 +4,7 @@ import { Send } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { buildWhatsAppInquiryUrl } from '../../../utils/whatsappCheckout';
+import api from '../../../utils/axios';
 
 const initialForm = {
   company: '',
@@ -41,6 +42,7 @@ export default function InquiryForm({
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -50,7 +52,7 @@ export default function InquiryForm({
     setSubmitted(false);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = validateForm(form);
     setErrors(nextErrors);
@@ -60,15 +62,34 @@ export default function InquiryForm({
       return;
     }
 
-    const companyLine = form.company.trim() ? `Company: ${form.company.trim()}\n` : '';
-    window.location.href = buildWhatsAppInquiryUrl({
-      name: form.name,
-      phone: form.mobile,
-      subject,
-      message: `${companyLine}Email: ${form.email.trim()}\n${form.message.trim() || 'Please schedule a meeting for more details.'}`,
-    });
-    setSubmitted(true);
-    setForm(initialForm);
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const payload = {
+        company: form.company.trim(),
+        name: form.name.trim(),
+        mobile: form.mobile,
+        email: form.email.trim(),
+        subject,
+        message: form.message.trim(),
+      };
+      const response = await api.post('/api/v1/inquiries', payload);
+      if (!response.data?.success) throw new Error(response.data?.message || 'Inquiry could not be saved.');
+
+      const companyLine = payload.company ? `Company: ${payload.company}\n` : '';
+      const whatsappUrl = buildWhatsAppInquiryUrl({
+        name: payload.name,
+        phone: payload.mobile,
+        subject,
+        message: `${companyLine}Email: ${payload.email}\n${payload.message || 'Please schedule a meeting for more details.'}`,
+      });
+      setSubmitted(true);
+      setForm(initialForm);
+      window.location.assign(whatsappUrl);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || 'Could not save your inquiry. Please try again.');
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -121,9 +142,9 @@ export default function InquiryForm({
         />
       </label>
 
-      <button type="submit" className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#D85C6B] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_12px_28px_rgba(216,92,107,0.25)] hover:bg-[#4A2318]">
+      <button type="submit" disabled={submitting} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#D85C6B] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-[0_12px_28px_rgba(216,92,107,0.25)] hover:bg-[#4A2318] disabled:cursor-not-allowed disabled:opacity-60">
         <Send className="h-4 w-4" aria-hidden="true" />
-        {submitLabel}
+        {submitting ? 'Saving…' : submitLabel}
       </button>
     </form>
   );

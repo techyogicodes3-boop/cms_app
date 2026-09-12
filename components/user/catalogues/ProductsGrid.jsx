@@ -55,7 +55,7 @@ export default function ProductsGrid({ products, catalogueId, parentName }) {
     return products.map((item) => ({
       id: item.uuid,
       title: item.name,
-      description: item.validatedDescription || item.name,
+      description: item.validatedDescription || '',
       price: item.price,
       brand: '',
       rating: 4.5,
@@ -152,12 +152,10 @@ export default function ProductsGrid({ products, catalogueId, parentName }) {
                     {product.brand && (
                     <p className="text-sm font-medium text-[#7A625A]">{product.brand}</p>
                     )}
-                    <h3 className="text-base font-bold leading-snug text-[#2E1A14] sm:text-lg">
+                    <h3 title={product.title} className="line-clamp-2 h-12 text-base font-bold leading-snug text-[#2E1A14] sm:text-lg">
                       {product.title}
                     </h3>
-                    <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-[#7A625A]">
-                      {product.description}
-                    </p>
+                    {product.description && <p title={product.description} className="mt-1 line-clamp-2 h-10 text-sm leading-5 text-[#7A625A]">{product.description}</p>}
                     <div className="mt-2 flex items-center gap-1 text-[#C89A4B]">
                       {[1, 2, 3, 4, 5].map((value) => (
                         <Star key={value} className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
