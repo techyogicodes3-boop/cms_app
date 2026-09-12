@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { Box, Download, FileText, MessageSquare, Package, Users } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Box, Download, FileText, MessageSquare, Package, RefreshCw, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/utils/axios";
 import { downloadAuthenticatedFile } from "@/utils/downloadFile";
@@ -90,6 +90,7 @@ export default function DashboardOverview() {
   const [commerce, setCommerce] = useState({ orders: [], inquiries: [] });
   const [commerceLoading, setCommerceLoading] = useState(true);
   const [commerceError, setCommerceError] = useState('');
+  const [commerceRefreshing, setCommerceRefreshing] = useState(false);
   const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
@@ -114,23 +115,40 @@ export default function DashboardOverview() {
     };
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadCommerce = useCallback(async ({ initial = false } = {}) => {
+    if (initial) setCommerceLoading(true);
+    else setCommerceRefreshing(true);
     setCommerceError('');
-    api.get('/api/v1/admin/commerce/activity')
-      .then((response) => {
-        if (!response.data?.success) throw new Error(response.data?.message || 'Could not load orders and inquiries.');
-        if (mounted) setCommerce(response.data.data || { orders: [], inquiries: [] });
-      })
-      .catch((requestError) => {
-        if (!mounted) return;
-        setCommerceError(requestError?.response?.status === 404
-          ? 'Orders and inquiries API is not deployed. Redeploy the latest backend build.'
-          : requestError?.response?.data?.message || 'Could not load orders and inquiries.');
-      })
-      .finally(() => mounted && setCommerceLoading(false));
-    return () => { mounted = false; };
+    try {
+      const response = await api.get('/api/v1/admin/commerce/activity', {
+        params: { refreshedAt: Date.now() },
+      });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Could not load orders and inquiries.');
+      setCommerce(response.data.data || { orders: [], inquiries: [] });
+    } catch (requestError) {
+      setCommerceError(requestError?.response?.status === 404
+        ? 'Orders and inquiries API is not deployed. Redeploy the latest backend build.'
+        : requestError?.response?.data?.message || 'Could not load orders and inquiries.');
+    } finally {
+      setCommerceLoading(false);
+      setCommerceRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadCommerce({ initial: true });
+    const interval = window.setInterval(() => loadCommerce(), 15000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') loadCommerce();
+    };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [loadCommerce]);
 
   const parents = useMemo(() => summary.catalogues || [], [summary.catalogues]);
   const children = useMemo(() => summary.items || [], [summary.items]);
@@ -237,6 +255,7 @@ export default function DashboardOverview() {
             <p className="mt-1 text-sm text-[#7A625A]">Latest forms saved before customers continue to WhatsApp.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => loadCommerce()} disabled={commerceRefreshing} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#C98A78] px-3 text-sm font-bold text-[#4A2318] hover:bg-[#F6ECDD] disabled:cursor-not-allowed disabled:opacity-60"><RefreshCw className={`h-4 w-4 ${commerceRefreshing ? 'animate-spin' : ''}`} /> Refresh</button>
             <button type="button" onClick={() => handleDownload('inquiries')} disabled={Boolean(downloading)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#C98A78] px-3 text-sm font-bold text-[#4A2318] hover:bg-[#F6ECDD] disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" /> {downloading === 'inquiries' ? 'Downloading…' : 'Inquiries Excel'}</button>
             <button type="button" onClick={() => handleDownload('orders')} disabled={Boolean(downloading)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#D85C6B] px-3 text-sm font-bold text-white hover:bg-[#4A2318] disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" /> {downloading === 'orders' ? 'Downloading…' : 'Orders Excel'}</button>
           </div>
