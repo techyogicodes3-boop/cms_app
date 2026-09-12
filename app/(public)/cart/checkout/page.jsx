@@ -18,16 +18,18 @@ import { useCartItemsData } from '../../../../hooks/useCartItemsData';
 import { useCheckout } from '../../../../contexts/CheckoutContext';
 import { buildWhatsAppCheckoutUrl, calculateCartAmounts, parseCartPrice } from '../../../../utils/whatsappCheckout';
 import api from '../../../../utils/axios';
+import { firstValidationMessage, validateCheckoutAddress } from '../../../../utils/formValidation';
 
 
 export default function CheckoutPage() {
-  const { address, shippingMethod, setShippingMethod } = useCheckout();
+  const { address } = useCheckout();
 
   const router = useRouter();
   const { cart, isLoading: cartLoading, error: cartError, refetch: refetchCart } = useCartContext();
   const [selectedShippingMethod, setSelectedShippingMethod] = useState('standard');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deliveryErrors, setDeliveryErrors] = useState({});
 
   // Refetch cart data on mount to ensure fresh data
   useEffect(() => {
@@ -115,54 +117,28 @@ export default function CheckoutPage() {
     return null; // useEffect will handle redirect
   }
 
-  const validateDeliveryAddress = () => {
-  const requiredFields = [
-    'firstName',
-    'lastName',
-    'email',
-    'phoneNo',
-    'streetAddress',
-    'city',
-    'state',
-    'zipcode',
-  ];
-
-  for (let field of requiredFields) {
-    if (!address?.[field]?.trim()) {
-      toast.error('Please complete all required delivery fields');
-      return false;
-    }
-  }
-
-  // Email check
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email)) {
-    toast.error('Enter a valid email address');
-    return false;
-  }
-
-  // Phone check
-  if (!/^[0-9+\-\s()]{7,15}$/.test(address.phoneNo)) {
-    toast.error('Enter a valid phone number');
-    return false;
-  }
-
-  return true;
-};
-
-
   const handleShippingMethodChange = (method) => {
     setSelectedShippingMethod(method.id);
   };
 
 const handleConfirmPurchase = async () => {
-  // 1️⃣ Check Terms
-  if (!termsAccepted) {
-    toast.error('Please accept Terms & Conditions');
+  const nextErrors = validateCheckoutAddress(address);
+  setDeliveryErrors(nextErrors);
+  if (Object.keys(nextErrors).length > 0) {
+    toast.error(firstValidationMessage(nextErrors));
+    const firstField = Object.keys(nextErrors)[0];
+    document.getElementById(`checkout-${firstField}`)?.focus();
     return;
   }
 
-  // 2️⃣ Validate Delivery Form
-  if (!validateDeliveryAddress()) {
+  if (!termsAccepted) {
+    toast.error('Please accept the Terms and Conditions before continuing.');
+    return;
+  }
+
+  const invalidItem = orderItems.find((item) => !String(item.catalogueItemId || '').trim());
+  if (invalidItem) {
+    toast.error('A product in your cart is invalid. Remove it and add it again.');
     return;
   }
 
@@ -181,7 +157,7 @@ const handleConfirmPurchase = async () => {
     const response = await api.post('/api/v1/orders', {
       customer: {
         name: customer.name,
-        email: address.email.trim(),
+        email: address.email.trim().toLowerCase(),
         phone: address.phoneNo.trim(),
         streetAddress: address.streetAddress.trim(),
         city: address.city.trim(),
@@ -196,14 +172,17 @@ const handleConfirmPurchase = async () => {
         imageUrl: item.image || '',
       })),
       shippingMethod: selectedShippingMethod,
-      specialInstruction: address.specialInstruction || '',
+      specialInstruction: address.specialInstruction?.trim() || '',
     });
 
     if (!response.data?.success) throw new Error(response.data?.message || 'Order could not be saved.');
     const whatsappUrl = buildWhatsAppCheckoutUrl(orderItems, response.data.data.total, customer);
     window.location.assign(whatsappUrl);
   } catch (error) {
-    toast.error(error?.response?.data?.message || error.message || 'Could not save your order. Please try again.');
+    const message = error?.response?.status === 404
+      ? 'Order service is currently unavailable. Please try again shortly.'
+      : error?.response?.data?.message || error.message || 'Could not save your order. Please try again.';
+    toast.error(message);
     setSubmitting(false);
   }
 };
@@ -244,7 +223,10 @@ const handleConfirmPurchase = async () => {
               {/* Left: Checkout Forms (2 columns) */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Delivery Information */}
-                <DeliveryInformationForm />
+                <DeliveryInformationForm
+                  validationErrors={deliveryErrors}
+                  onClearError={(field) => setDeliveryErrors((current) => ({ ...current, [field]: undefined }))}
+                />
 
                 {/* Shipping Method */}
                 <ShippingMethodSelector

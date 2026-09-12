@@ -1,94 +1,29 @@
 'use client';
 
 import { Truck, Mail, Phone } from 'lucide-react';
-import { useState } from 'react';
 import { useCheckout } from '../../../contexts/CheckoutContext';
 
-export default function DeliveryInformationForm({ onSubmit }) {
+const indianStates = [
+  'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+  'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa',
+  'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
+  'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim',
+  'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+];
+
+export default function DeliveryInformationForm({ validationErrors = {}, onClearError }) {
   const { address, setAddress } = useCheckout();
-  const [errors, setErrors] = useState({});
+  const errors = validationErrors;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Phone: allow only numbers and max 10 digits
-    if (name === 'phoneNo') {
-      const numericValue = value.replace(/\D/g, '').slice(0, 10);
-      setAddress((prev) => ({
-        ...prev,
-        [name]: numericValue,
-      }));
-    } else {
-      setAddress((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-
-    setErrors((prev) => ({
-      ...prev,
-      [name]: '',
-    }));
-  };
-
-  const validate = () => {
-    const newErrors = {};
-
-    const requiredFields = [
-      'firstName',
-      'lastName',
-      'email',
-      'phoneNo',
-      'streetAddress',
-      'city',
-      'state',
-      'zipcode',
-    ];
-
-    requiredFields.forEach((field) => {
-      if (!address[field]?.trim()) {
-        newErrors[field] = 'This field is required';
-      }
-    });
-
-    // Strong Email Validation (must end with .com)
-    if (
-      address.email &&
-      !/^[^\s@]+@[^\s@]+\.com$/i.test(address.email)
-    ) {
-      newErrors.email =
-        'Email must be valid and end with .com (example@gmail.com)';
-    }
-
-    // Strong Phone Validation (exactly 10 digits)
-    if (address.phoneNo && !/^\d{10}$/.test(address.phoneNo)) {
-      newErrors.phoneNo =
-        'Phone number must be exactly 10 digits';
-    }
-
-    // ZIP Code Validation (exactly 6 digits)
-    if (address.zipcode && !/^\d{6}$/.test(address.zipcode)) {
-      newErrors.zipcode =
-        'ZIP code must be exactly 6 digits';
-    }
-
-    // Special instruction max 100 chars
-    if (
-      address.specialInstruction &&
-      address.specialInstruction.length > 100
-    ) {
-      newErrors.specialInstruction =
-        'Maximum 100 characters allowed';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    onSubmit?.(address);
+    const numericValue = ['phoneNo', 'zipcode'].includes(name)
+      ? value.replace(/\D/g, '').slice(0, name === 'zipcode' ? 6 : 10)
+      : value;
+    setAddress((prev) => ({ ...prev, [name]: numericValue }));
+    onClearError?.(name);
   };
 
   return (
@@ -108,7 +43,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
+      <div className="mt-6 space-y-5">
         {/* First & Last Name */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
@@ -124,6 +59,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
                 name={name}
                 value={address[name] || ''}
                 onChange={handleChange}
+                id={`checkout-${name}`}
+                maxLength={80}
+                aria-invalid={Boolean(errors[name])}
+                aria-describedby={errors[name] ? `checkout-${name}-error` : undefined}
                 className={`w-full rounded-lg border px-4 py-2.5 focus:ring-2 focus:ring-blue-500 ${
                   errors[name]
                     ? 'border-rose-500'
@@ -131,7 +70,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
                 }`}
               />
               {errors[name] && (
-                <p className="mt-1 text-xs text-rose-600">
+                <p id={`checkout-${name}-error`} className="mt-1 text-xs text-rose-600" role="alert">
                   {errors[name]}
                 </p>
               )}
@@ -151,6 +90,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
               name="email"
               value={address.email || ''}
               onChange={handleChange}
+              id="checkout-email"
+              maxLength={254}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'checkout-email-error' : undefined}
               className={`w-full rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 border ${
                 errors.email
                   ? 'border-rose-500'
@@ -159,7 +102,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
             />
           </div>
           {errors.email && (
-            <p className="mt-1 text-xs text-rose-600">
+            <p id="checkout-email-error" className="mt-1 text-xs text-rose-600" role="alert">
               {errors.email}
             </p>
           )}
@@ -178,6 +121,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
               maxLength={10}
               value={address.phoneNo || ''}
               onChange={handleChange}
+              id="checkout-phoneNo"
+              inputMode="numeric"
+              aria-invalid={Boolean(errors.phoneNo)}
+              aria-describedby={errors.phoneNo ? 'checkout-phoneNo-error' : undefined}
               className={`w-full rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 border ${
                 errors.phoneNo
                   ? 'border-rose-500'
@@ -186,7 +133,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
             />
           </div>
           {errors.phoneNo && (
-            <p className="mt-1 text-xs text-rose-600">
+            <p id="checkout-phoneNo-error" className="mt-1 text-xs text-rose-600" role="alert">
               {errors.phoneNo}
             </p>
           )}
@@ -202,6 +149,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
             name="streetAddress"
             value={address.streetAddress || ''}
             onChange={handleChange}
+            id="checkout-streetAddress"
+            maxLength={300}
+            aria-invalid={Boolean(errors.streetAddress)}
+            aria-describedby={errors.streetAddress ? 'checkout-streetAddress-error' : undefined}
             className={`w-full rounded-lg border px-4 py-2.5 focus:ring-2 focus:ring-blue-500 ${
               errors.streetAddress
                 ? 'border-rose-500'
@@ -209,7 +160,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
             }`}
           />
           {errors.streetAddress && (
-            <p className="mt-1 text-xs text-rose-600">
+            <p id="checkout-streetAddress-error" className="mt-1 text-xs text-rose-600" role="alert">
               {errors.streetAddress}
             </p>
           )}
@@ -225,6 +176,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
             name="city"
             value={address.city || ''}
             onChange={handleChange}
+            id="checkout-city"
+            maxLength={100}
+            aria-invalid={Boolean(errors.city)}
+            aria-describedby={errors.city ? 'checkout-city-error' : undefined}
             className={`w-full rounded-lg border px-4 py-2.5 focus:ring-2 focus:ring-blue-500 ${
               errors.city
                 ? 'border-rose-500'
@@ -232,7 +187,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
             }`}
           />
           {errors.city && (
-            <p className="mt-1 text-xs text-rose-600">
+            <p id="checkout-city-error" className="mt-1 text-xs text-rose-600" role="alert">
               {errors.city}
             </p>
           )}
@@ -249,6 +204,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
             maxLength={6}
             value={address.zipcode || ''}
             onChange={handleChange}
+            id="checkout-zipcode"
+            inputMode="numeric"
+            aria-invalid={Boolean(errors.zipcode)}
+            aria-describedby={errors.zipcode ? 'checkout-zipcode-error' : undefined}
             className={`w-full rounded-lg border px-4 py-2.5 focus:ring-2 focus:ring-blue-500 ${
               errors.zipcode
                 ? 'border-rose-500'
@@ -256,7 +215,7 @@ export default function DeliveryInformationForm({ onSubmit }) {
             }`}
           />
           {errors.zipcode && (
-            <p className="mt-1 text-xs text-rose-600">
+            <p id="checkout-zipcode-error" className="mt-1 text-xs text-rose-600" role="alert">
               {errors.zipcode}
             </p>
           )}
@@ -271,6 +230,9 @@ export default function DeliveryInformationForm({ onSubmit }) {
             name="state"
             value={address.state || ''}
             onChange={handleChange}
+            id="checkout-state"
+            aria-invalid={Boolean(errors.state)}
+            aria-describedby={errors.state ? 'checkout-state-error' : undefined}
             className={`w-full rounded-lg border px-4 py-2.5 focus:ring-2 focus:ring-blue-500 ${
               errors.state
                 ? 'border-rose-500'
@@ -278,14 +240,10 @@ export default function DeliveryInformationForm({ onSubmit }) {
             }`}
           >
             <option value="">Select State</option>
-            <option value="Maharashtra">Maharashtra</option>
-            <option value="Gujarat">Gujarat</option>
-            <option value="Karnataka">Karnataka</option>
-            <option value="Tamil Nadu">Tamil Nadu</option>
-            <option value="Uttar Pradesh">Uttar Pradesh</option>
+            {indianStates.map((state) => <option key={state} value={state}>{state}</option>)}
           </select>
           {errors.state && (
-            <p className="mt-1 text-xs text-rose-600">
+            <p id="checkout-state-error" className="mt-1 text-xs text-rose-600" role="alert">
               {errors.state}
             </p>
           )}
@@ -298,17 +256,21 @@ export default function DeliveryInformationForm({ onSubmit }) {
           </label>
           <textarea
             name="specialInstruction"
-            maxLength={100}
+            maxLength={500}
             rows={3}
             value={address.specialInstruction || ''}
             onChange={handleChange}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:ring-2 focus:ring-blue-500 resize-none"
+            id="checkout-specialInstruction"
+            aria-invalid={Boolean(errors.specialInstruction)}
+            aria-describedby={errors.specialInstruction ? 'checkout-specialInstruction-error' : undefined}
+            className={`w-full rounded-lg border px-4 py-2.5 focus:ring-2 focus:ring-blue-500 resize-none ${errors.specialInstruction ? 'border-rose-500' : 'border-slate-300'}`}
           />
-          <div className="mt-1 text-xs text-slate-500 text-right">
-            {(address.specialInstruction?.length || 0)}/100
+          <div className="mt-1 flex justify-between gap-3 text-xs">
+            <span id="checkout-specialInstruction-error" className="text-rose-600" role={errors.specialInstruction ? 'alert' : undefined}>{errors.specialInstruction || ''}</span>
+            <span className="text-slate-500">{(address.specialInstruction?.length || 0)}/500</span>
           </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

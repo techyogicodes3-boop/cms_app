@@ -88,6 +88,8 @@ export default function DashboardOverview() {
   const [error, setError] = useState(null);
   const [selectedMetric, setSelectedMetric] = useState("users");
   const [commerce, setCommerce] = useState({ orders: [], inquiries: [] });
+  const [commerceLoading, setCommerceLoading] = useState(true);
+  const [commerceError, setCommerceError] = useState('');
   const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
@@ -114,13 +116,19 @@ export default function DashboardOverview() {
 
   useEffect(() => {
     let mounted = true;
+    setCommerceError('');
     api.get('/api/v1/admin/commerce/activity')
       .then((response) => {
-        if (mounted && response.data?.success) setCommerce(response.data.data || { orders: [], inquiries: [] });
+        if (!response.data?.success) throw new Error(response.data?.message || 'Could not load orders and inquiries.');
+        if (mounted) setCommerce(response.data.data || { orders: [], inquiries: [] });
       })
-      .catch(() => {
-        // Catalogue/user dashboard remains usable if commerce data cannot load.
-      });
+      .catch((requestError) => {
+        if (!mounted) return;
+        setCommerceError(requestError?.response?.status === 404
+          ? 'Orders and inquiries API is not deployed. Redeploy the latest backend build.'
+          : requestError?.response?.data?.message || 'Could not load orders and inquiries.');
+      })
+      .finally(() => mounted && setCommerceLoading(false));
     return () => { mounted = false; };
   }, []);
 
@@ -233,19 +241,22 @@ export default function DashboardOverview() {
             <button type="button" onClick={() => handleDownload('orders')} disabled={Boolean(downloading)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#D85C6B] px-3 text-sm font-bold text-white hover:bg-[#4A2318] disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" /> {downloading === 'orders' ? 'Downloading…' : 'Orders Excel'}</button>
           </div>
         </div>
+        {commerceError && <div className="border-b border-[#D95C5C]/30 bg-[#FFF0F0] px-5 py-3 text-sm font-semibold text-[#D95C5C]" role="alert">{commerceError}</div>}
         <div className="grid lg:grid-cols-2">
           <div className="border-b border-[#E8D8CC] p-5 lg:border-b-0 lg:border-r">
             <h3 className="flex items-center gap-2 font-bold"><FileText className="h-4 w-4 text-[#D85C6B]" /> Latest orders ({commerce.orders?.length || 0})</h3>
             <div className="mt-3 space-y-2">
               {(commerce.orders || []).slice(0, 5).map((order) => <div key={order.uuid} className="flex items-center justify-between gap-3 rounded-lg bg-[#FFF9F3] p-3 text-sm"><div className="min-w-0"><p className="truncate font-semibold">{order.customer?.name || 'Customer'}</p><p className="truncate text-xs text-[#7A625A]">{order.items?.map((item) => item.name).join(', ')}</p></div><div className="shrink-0 text-right"><p className="font-bold">₹{Number(order.total || 0).toLocaleString('en-IN')}</p><p className="text-xs text-[#7A625A]">{new Date(order.createdAt).toLocaleDateString('en-IN')}</p></div></div>)}
-              {!commerce.orders?.length && <p className="py-3 text-sm text-[#7A625A]">No checkout forms submitted yet.</p>}
+              {commerceLoading && <p className="py-3 text-sm text-[#7A625A]">Loading orders…</p>}
+              {!commerceLoading && !commerceError && !commerce.orders?.length && <p className="py-3 text-sm text-[#7A625A]">No checkout forms submitted yet.</p>}
             </div>
           </div>
           <div className="p-5">
             <h3 className="flex items-center gap-2 font-bold"><MessageSquare className="h-4 w-4 text-[#D85C6B]" /> Latest inquiries ({commerce.inquiries?.length || 0})</h3>
             <div className="mt-3 space-y-2">
               {(commerce.inquiries || []).slice(0, 5).map((inquiry) => <div key={inquiry.uuid} className="flex items-center justify-between gap-3 rounded-lg bg-[#FFF9F3] p-3 text-sm"><div className="min-w-0"><p className="truncate font-semibold">{inquiry.name}</p><p className="truncate text-xs text-[#7A625A]">{inquiry.email} · {inquiry.mobile}</p></div><div className="shrink-0 text-right"><p className="max-w-36 truncate text-xs font-semibold">{inquiry.subject}</p><p className="text-xs text-[#7A625A]">{new Date(inquiry.createdAt).toLocaleDateString('en-IN')}</p></div></div>)}
-              {!commerce.inquiries?.length && <p className="py-3 text-sm text-[#7A625A]">No contact forms submitted yet.</p>}
+              {commerceLoading && <p className="py-3 text-sm text-[#7A625A]">Loading inquiries…</p>}
+              {!commerceLoading && !commerceError && !commerce.inquiries?.length && <p className="py-3 text-sm text-[#7A625A]">No contact forms submitted yet.</p>}
             </div>
           </div>
         </div>
