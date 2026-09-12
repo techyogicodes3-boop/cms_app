@@ -39,10 +39,12 @@ export function clearAuthSession() {
 }
 
 export async function logoutAuthSession() {
+  const token = canUseBrowser() ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
   try {
     await fetch(`/api/v1/auth/logout`, {
       method: "POST",
       credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
   } catch {
     // Local auth is still cleared below; middleware will clear stale cookies on the next navigation.
@@ -84,7 +86,9 @@ export function persistAuthSession({ token, user }) {
     } catch {
       // A malformed legacy cart should not prevent a successful login.
     }
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    if (typeof token === "string" && token) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    }
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
     window.dispatchEvent(new Event("cart-changed"));
   }
@@ -98,9 +102,11 @@ export async function refreshAuthSession() {
   }
 
   try {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
     const response = await fetch(`/api/v1/auth/me`, {
       method: "GET",
       credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
 
     if (!response.ok) {
@@ -110,7 +116,7 @@ export async function refreshAuthSession() {
 
     const json = await response.json();
     const user = json?.data?.user;
-    if (!persistAuthSession({ user })) {
+    if (!persistAuthSession({ token, user })) {
       return { isAuthenticated: false, token: null, user: null, role: null, shouldClear: false };
     }
 
@@ -132,7 +138,7 @@ export function getClientAuthState() {
   }
 
   const cookieRole = getCookie(AUTH_ROLE_COOKIE);
-  const legacyToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
 
   let user = null;
   try {
@@ -144,16 +150,18 @@ export function getClientAuthState() {
 
   const role = user?.role || cookieRole;
   const isAuthenticated = Boolean(
-    role &&
+    user &&
+      role &&
+      (token || cookieRole) &&
       (!cookieRole || role === cookieRole) &&
       VALID_ROLES.has(role)
   );
 
   return {
     isAuthenticated,
-    token: null,
+    token: isAuthenticated ? token : null,
     user: isAuthenticated ? user : null,
     role: isAuthenticated ? role : null,
-    shouldClear: Boolean(legacyToken || cookieRole || user) && !isAuthenticated,
+    shouldClear: Boolean(token || cookieRole || user) && !isAuthenticated,
   };
 }

@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { clearAuthSession } from './authStorage';
-import { clearCartStorage } from '../services/cart.service';
 
 const api = axios.create({
   baseURL: '',
@@ -9,6 +8,12 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -19,10 +24,11 @@ api.interceptors.response.use(
   (error) => {
     if (typeof window !== 'undefined' && error?.response?.status === 401) {
       clearAuthSession();
-      clearCartStorage();
       window.dispatchEvent(new Event('token-changed'));
 
-      if (!['/', '/login'].includes(window.location.pathname)) {
+      const path = window.location.pathname;
+      const isProtectedPath = path === '/admin' || path.startsWith('/admin/') || path === '/account' || path.startsWith('/account/');
+      if (isProtectedPath) {
         window.location.replace('/login');
       }
     }

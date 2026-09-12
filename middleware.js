@@ -58,6 +58,15 @@ function setRoleCookie(response, role, maxAge = 24 * 60 * 60) {
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
+  const isGuestOnly = guestOnlyRoutes.has(pathname);
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAccountPath = pathname === "/account" || pathname.startsWith("/account/");
+
+  // Storefront routes are public and must not depend on authentication health.
+  if (!isGuestOnly && !isAdminPath && !isAccountPath) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
   const roleCookie = request.cookies.get(AUTH_ROLE_COOKIE)?.value;
   const auth = await getCurrentAuth(token, request.headers.get("cookie"));
@@ -65,31 +74,21 @@ export async function middleware(request) {
   const hasBrokenAuth = Boolean(token || roleCookie) && !auth;
   const isAuthenticated = Boolean(auth && VALID_ROLES.has(role));
 
-  if (hasBrokenAuth) {
-    if (pathname === "/login") {
-      return clearAuthCookies(NextResponse.next());
-    }
-
-    if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-      return redirect(request, "/login", true);
-    }
-
-    return clearAuthCookies(NextResponse.next());
+  if (hasBrokenAuth || !isAuthenticated) {
+    if (isGuestOnly) return clearAuthCookies(NextResponse.next());
+    return redirect(request, "/login", true);
   }
 
-  if (guestOnlyRoutes.has(pathname)) {
-    if (!isAuthenticated) return NextResponse.next();
-    return redirect(request, role === "admin" ? "/admin/dashboard" : "/home");
+  if (isGuestOnly) {
+    return redirect(request, role === "admin" ? "/admin/dashboard" : "/account");
   }
 
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-    if (!isAuthenticated) return redirect(request, "/login", true);
-    if (role !== "admin") return redirect(request, "/home");
+  if (isAdminPath) {
+    if (role !== "admin") return redirect(request, "/account");
     return roleCookie === role ? NextResponse.next() : setRoleCookie(NextResponse.next(), role, auth.maxAge);
   }
 
-  if (pathname === "/account" || pathname.startsWith("/account/")) {
-    if (!isAuthenticated) return redirect(request, "/login", true);
+  if (isAccountPath) {
     if (role !== "user") return redirect(request, "/admin/dashboard");
     return roleCookie === role ? NextResponse.next() : setRoleCookie(NextResponse.next(), role, auth.maxAge);
   }

@@ -2,7 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Download, FileText, MessageSquare, Package, Users } from "lucide-react";
+import toast from "react-hot-toast";
 import api from "@/utils/axios";
+import { downloadAuthenticatedFile } from "@/utils/downloadFile";
 
 const SUMMARY_URL = "/api/v1/admin/dashboard/summary";
 
@@ -86,6 +88,7 @@ export default function DashboardOverview() {
   const [error, setError] = useState(null);
   const [selectedMetric, setSelectedMetric] = useState("users");
   const [commerce, setCommerce] = useState({ orders: [], inquiries: [] });
+  const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -124,6 +127,29 @@ export default function DashboardOverview() {
   const parents = useMemo(() => summary.catalogues || [], [summary.catalogues]);
   const children = useMemo(() => summary.items || [], [summary.items]);
   const users = useMemo(() => summary.users || [], [summary.users]);
+
+  const handleDownload = async (type) => {
+    if (downloading) return;
+    setDownloading(type);
+    try {
+      const isOrders = type === 'orders';
+      await downloadAuthenticatedFile(
+        `/api/v1/admin/reports/${isOrders ? 'orders' : 'inquiries'}.xls`,
+        `chocotraill-${isOrders ? 'orders' : 'inquiries'}.xls`
+      );
+      toast.success(`${isOrders ? 'Orders' : 'Inquiries'} report downloaded`);
+    } catch (error) {
+      const status = error?.response?.status;
+      const message = status === 404
+        ? 'Report API is not deployed on the backend yet.'
+        : status === 403
+          ? 'Only administrators can download reports.'
+          : error?.message || 'Could not download the report.';
+      toast.error(message);
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const metrics = useMemo(() => [
     { id: "users", icon: Users, label: "Active Users", value: users.filter((user) => isActive(user) || !user.status).length },
@@ -203,8 +229,8 @@ export default function DashboardOverview() {
             <p className="mt-1 text-sm text-[#7A625A]">Latest forms saved before customers continue to WhatsApp.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href="/api/v1/admin/reports/inquiries.xls" className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#C98A78] px-3 text-sm font-bold text-[#4A2318] hover:bg-[#F6ECDD]"><Download className="h-4 w-4" /> Inquiries Excel</a>
-            <a href="/api/v1/admin/reports/orders.xls" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#D85C6B] px-3 text-sm font-bold text-white hover:bg-[#4A2318]"><Download className="h-4 w-4" /> Orders Excel</a>
+            <button type="button" onClick={() => handleDownload('inquiries')} disabled={Boolean(downloading)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#C98A78] px-3 text-sm font-bold text-[#4A2318] hover:bg-[#F6ECDD] disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" /> {downloading === 'inquiries' ? 'Downloading…' : 'Inquiries Excel'}</button>
+            <button type="button" onClick={() => handleDownload('orders')} disabled={Boolean(downloading)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#D85C6B] px-3 text-sm font-bold text-white hover:bg-[#4A2318] disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" /> {downloading === 'orders' ? 'Downloading…' : 'Orders Excel'}</button>
           </div>
         </div>
         <div className="grid lg:grid-cols-2">
